@@ -1,0 +1,34 @@
+[project]
+name = "pastelaria-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "odraude222k",email = "pereirabentoeduardo@gmail.com"}
+]
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "fastapi (>=0.141.1,<0.142.0)",
+    "uvicorn[standard] (>=0.53.0,<0.54.0)",
+    "sqlalchemy (>=2.0.54,<3.0.0)",
+    "alembic (>=1.20.0,<2.0.0)",
+    "psycopg[binary] (>=3.3.6,<4.0.0)",
+    "pydantic-settings (>=2.15.0,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "ruff (>=0.16.8,<0.17.0)"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
