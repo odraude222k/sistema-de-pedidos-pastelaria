@@ -1,4 +1,4 @@
-.PHONY: help up down logs ps test-backend lint-backend
+.PHONY: help up down logs ps install-frontend test-backend lint-backend test-frontend lint-frontend build-frontend
 
 help:
 	@echo "Comandos disponiveis:"
@@ -9,9 +9,13 @@ help:
 	@echo "  make ps              Mostra os servicos"
 	@echo "  make test-backend    Executa os testes do backend"
 	@echo "  make lint-backend    Verifica o codigo do backend"
+	@echo "  make install-frontend  Instala dependencias do frontend"
+	@echo "  make test-frontend    Executa os testes do frontend"
+	@echo "  make lint-frontend    Verifica o codigo do frontend"
+	@echo "  make build-frontend   Gera o build do frontend"
 
 up:
-	docker compose up -d
+	docker compose up -d --build
 
 down:
 	docker compose down
@@ -28,3 +32,15 @@ test-backend:
 lint-backend:
 	cd backend && poetry run ruff check .
 	cd backend && poetry run ruff format --check .
+
+install-frontend:
+	cd frontend && npm ci
+
+test-frontend:
+	cd frontend && npm test
+
+lint-frontend:
+	cd frontend && npm run lint
+
+build-frontend:
+	cd frontend && npm run build
