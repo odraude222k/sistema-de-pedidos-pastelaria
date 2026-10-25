@@ -7,6 +7,8 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     database_url: str
+    admin_api_key: str = "admin-local"
+    frontend_origin: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",
