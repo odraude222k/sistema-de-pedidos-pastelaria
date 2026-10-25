@@ -1,15 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import App from './App.jsx'
+import App from './AdminApp.jsx'
 
-describe('App', () => {
-  it('atualiza o contador quando o botão é clicado', () => {
+describe('Painel administrativo', () => {
+  it('solicita a chave administrativa', () => {
     render(<App />)
-
-    const counter = screen.getByRole('button', { name: 'Count is 0' })
-    fireEvent.click(counter)
-
-    expect(screen.getByRole('button', { name: 'Count is 1' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Painel administrativo' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Chave administrativa')).toBeInTheDocument()
   })
 })
