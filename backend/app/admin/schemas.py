@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import OrderStatus
+from app.admin.models import OrderStatus
 
 
 class CategoryCreate(BaseModel):

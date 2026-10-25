@@ -6,10 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import settings
-from app.database import get_db
-from app.models import Category, Order, OrderStatus, Product
-from app.schemas import (
+from app.admin.models import Category, Order, OrderStatus, Product
+from app.admin.schemas import (
     CategoryCreate,
     CategoryRead,
     OrderRead,
@@ -18,6 +16,8 @@ from app.schemas import (
     ProductRead,
     ProductUpdate,
 )
+from app.config import settings
+from app.database import get_db
 
 router = APIRouter(prefix="/admin", tags=["Administração"])
 DbSession = Annotated[Session, Depends(get_db)]
