@@ -1,13 +1,23 @@
-import secrets
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.admin.models import Category, Order, OrderStatus, Product
+from app.admin.models import (
+    AdminSession,
+    AdminUser,
+    Category,
+    Order,
+    OrderStatus,
+    Product,
+)
 from app.admin.schemas import (
+    AdminLogin,
+    AdminToken,
     CategoryCreate,
     CategoryRead,
     OrderRead,
@@ -16,24 +26,93 @@ from app.admin.schemas import (
     ProductRead,
     ProductUpdate,
 )
-from app.config import settings
+from app.core.security import (
+    DUMMY_PASSWORD_HASH,
+    generate_session_token,
+    hash_session_token,
+    verify_password,
+)
 from app.database import get_db
 
 router = APIRouter(prefix="/admin", tags=["Administração"])
 DbSession = Annotated[Session, Depends(get_db)]
+bearer_auth = HTTPBearer(auto_error=False)
 
 
-def require_admin(x_admin_key: Annotated[str | None, Header()] = None) -> None:
-    if x_admin_key is None or not secrets.compare_digest(
-        x_admin_key, settings.admin_api_key
-    ):
+def require_admin(
+    db: DbSession,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_auth)],
+) -> AdminUser:
+    admin_session = None
+    if credentials is not None and credentials.scheme.lower() == "bearer":
+        admin_session = db.scalar(
+            select(AdminSession)
+            .options(joinedload(AdminSession.admin_user))
+            .where(
+                AdminSession.token_hash == hash_session_token(credentials.credentials),
+                AdminSession.expires_at > datetime.now(UTC),
+            )
+        )
+    if admin_session is None or not admin_session.admin_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Acesso administrativo não autorizado",
+            detail="Sessão administrativa inválida ou expirada",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return admin_session.admin_user
+
+
+Admin = Annotated[AdminUser, Depends(require_admin)]
+
+
+@router.post("/login", response_model=AdminToken)
+def login(data: AdminLogin, db: DbSession):
+    admin = db.scalar(
+        select(AdminUser).where(AdminUser.username == data.username.strip().lower())
+    )
+    password_is_valid = verify_password(
+        data.password,
+        admin.password_hash if admin is not None else DUMMY_PASSWORD_HASH,
+    )
+    if admin is None or not admin.is_active or not password_is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha inválidos",
         )
 
+    token = generate_session_token()
+    expires_at = datetime.now(UTC) + timedelta(hours=12)
+    db.add(
+        AdminSession(
+            token_hash=hash_session_token(token),
+            admin_user_id=admin.id,
+            expires_at=expires_at,
+        )
+    )
+    db.commit()
+    return AdminToken(access_token=token, expires_at=expires_at)
 
-Admin = Annotated[None, Depends(require_admin)]
+
+@router.get("/me")
+def current_admin(admin: Admin):
+    return {"id": admin.id, "username": admin.username}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    db: DbSession,
+    _: Admin,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_auth)],
+):
+    admin_session = db.scalar(
+        select(AdminSession).where(
+            AdminSession.token_hash == hash_session_token(credentials.credentials)
+        )
+    )
+    if admin_session is not None:
+        db.delete(admin_session)
+        db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/categories", response_model=list[CategoryRead])

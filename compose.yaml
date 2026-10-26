@@ -19,7 +19,6 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-admin-local}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_PORT:-3000}
     ports:
       - "8001:8000"

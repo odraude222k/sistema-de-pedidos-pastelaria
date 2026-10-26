@@ -6,8 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.admin.models import Order
-from app.config import settings
+from app.admin.models import AdminUser, Order
+from app.core.security import hash_password, verify_password
 from app.database import Base, get_db
 from app.main import app
 
@@ -21,28 +21,54 @@ def client():
     )
     testing_session = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
+    with testing_session() as session:
+        session.add(
+            AdminUser(username="admin", password_hash=hash_password("senha-segura"))
+        )
+        session.commit()
 
     def override_db():
         with testing_session() as session:
             yield session
 
     app.dependency_overrides[get_db] = override_db
-    settings.admin_api_key = "segredo"
     with TestClient(app) as test_client:
         yield test_client, testing_session
     app.dependency_overrides.clear()
 
 
-def test_rejects_request_without_admin_key(client):
+def test_password_hash_is_verified():
+    encoded = hash_password("senha-segura")
+    assert verify_password("senha-segura", encoded)
+    assert not verify_password("senha-incorreta", encoded)
+
+
+def admin_headers(test_client):
+    response = test_client.post(
+        "/admin/login",
+        json={"username": "admin", "password": "senha-segura"},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+def test_rejects_request_without_credentials(client):
     test_client, _ = client
     response = test_client.get("/admin/products")
     assert response.status_code == 401
-    assert response.json()["detail"] == "Acesso administrativo não autorizado"
+    assert response.json()["detail"] == "Sessão administrativa inválida ou expirada"
+
+
+def test_authenticates_admin_stored_in_database(client):
+    test_client, _ = client
+    response = test_client.get("/admin/me", headers=admin_headers(test_client))
+    assert response.status_code == 200
+    assert response.json()["username"] == "admin"
 
 
 def test_category_and_product_crud(client):
     test_client, _ = client
-    headers = {"X-Admin-Key": "segredo"}
+    headers = admin_headers(test_client)
     category = test_client.post(
         "/admin/categories", json={"name": "Pastéis salgados"}, headers=headers
     )
@@ -99,7 +125,7 @@ def test_order_status_flow(client):
         session.commit()
         order_id = order.id
 
-    headers = {"X-Admin-Key": "segredo"}
+    headers = admin_headers(test_client)
     accepted = test_client.patch(
         f"/admin/orders/{order_id}/status",
         json={"status": "aceito"},

@@ -10,6 +10,17 @@ class CategoryCreate(BaseModel):
     name: str = Field(min_length=2, max_length=80)
 
 
+class AdminLogin(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class AdminToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_at: datetime
+
+
 class CategoryRead(CategoryCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int

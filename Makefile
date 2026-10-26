@@ -1,4 +1,4 @@
-.PHONY: help up down logs ps install-frontend test-backend lint-backend test-frontend lint-frontend build-frontend
+.PHONY: help up down logs ps install-frontend test-backend lint-backend test-frontend lint-frontend build-frontend create-admin
 
 help:
 	@echo "Comandos disponiveis:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make test-frontend    Executa os testes do frontend"
 	@echo "  make lint-frontend    Verifica o codigo do frontend"
 	@echo "  make build-frontend   Gera o build do frontend"
+	@echo "  make create-admin USER=nome  Cria um usuario administrativo"
 
 up:
 	docker compose up -d --build
@@ -44,3 +45,6 @@ lint-frontend:
 
 build-frontend:
 	cd frontend && npm run build
+
+create-admin:
+	cd backend && poetry run python -m app.admin.create_user $(USER)
