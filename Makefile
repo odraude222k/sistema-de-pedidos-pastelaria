@@ -44,3 +44,6 @@ lint-frontend:
 
 build-frontend:
 	cd frontend && npm run build
+
+run-backend:
+	cd backend && poetry run uvicorn app.main:app --reload
