@@ -1,5 +1,7 @@
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
+
 from app.database import Base
+
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -11,13 +13,9 @@ class Usuario(Base):
     ativo = Column("ativo", Boolean, nullable=False)
     admin = Column("admin", Boolean, default=False, nullable=False)
 
-    def __init__(self, nome,email,senha,ativo=True,admin=False):
+    def __init__(self, nome, email, senha, ativo=True, admin=False):
         self.nome = nome
         self.email = email
         self.senha = senha
         self.ativo = ativo
         self.admin = admin
-
-
-
-
